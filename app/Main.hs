@@ -13,8 +13,8 @@ import Data.Lightning
 import Data.Lightning.Generic 
 import Control.Plugin 
 import Control.Client 
-import Control.Conduit 
 import Data.Aeson
+import Data.Aeson.Key
 import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.IO.Class 
@@ -43,8 +43,8 @@ manifest = object [
        ]
     ]
 
-start :: PluginInit ()
-start _ = pure () 
+start :: InitMonad ()  
+start = pure () 
 
 app :: PluginApp () 
 app (Just i, "wallet", _) = do 
@@ -52,17 +52,24 @@ app (Just i, "wallet", _) = do
     respond (summarizeFunds x) i  
     where 
         summarizeFunds :: Funds -> Value
-        summarizeFunds myf = object [
+        summarizeFunds myf = object $ [
               "withdraw" .= (prettyI (Just ',') . (`div` 1000) . outSum . outputs $ myf)
             , "pay" .= (prettyI (Just ',') (payable $ fchannels myf))
             , "invoice" .= (prettyI (Just ',') $ recable (fchannels myf))
-            ]
+            ] <> 
+                case limbo (fchannels myf) of 
+                    [] -> []
+                    x -> ["_limbo" .= object x]
+            
             where outSum :: [Outs] -> Msat 
                   outSum = sum . map __amount_msat . filter ((=="confirmed") . __status) 
-                  payable = sum . map our_amount_msat . filter ((=="CHANNELD_NORMAL") . _state)
-                  recable = sum . map recable' . filter ((=="CHANNELD_NORMAL")._state) 
+                  payable = sum . map our_amount_msat . normal 
+                  recable = sum . map recable' . normal 
                   recable' a = _amount_msat a - our_amount_msat a
-        
+                  normal = filter ((=="CHANNELD_NORMAL")._state)
+                  abnormal = filter ((/="CHANNELD_NORMAL")._state)
+                  limbo = map keyOb . abnormal 
+                  keyOb (Chans{_state, our_amount_msat}) = (fromText _state) .= our_amount_msat
 app (Just i, "balances", _) = do
     Just (Res (fromJSON -> Success (Funds{channels})) _) <- lightningCli (Command "listfunds" fundFilter fundParams) 
     respond (balances channels) i 

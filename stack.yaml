@@ -37,7 +37,7 @@ packages:
 #
 extra-deps:
 - git: https://github.com/autonomousorganization/blitz.git
-  commit: 5a43fc1cd02f7913889e947a55645c80cc830d95
+  commit: bfa96125d32f3168f4913d2f2233521c12c3c583
 
 
 # extra-deps:

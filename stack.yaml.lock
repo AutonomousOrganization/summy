@@ -5,15 +5,15 @@
 
 packages:
 - completed:
-    commit: 5a43fc1cd02f7913889e947a55645c80cc830d95
+    commit: bfa96125d32f3168f4913d2f2233521c12c3c583
     git: https://github.com/autonomousorganization/blitz.git
     name: blitz
     pantry-tree:
-      sha256: 8f4b8a0740b2710941a665c6dedf7cc8b8e1b7b7ecf702d8ea36256327b8e7de
-      size: 1109
-    version: 0.1.0.0
+      sha256: 343a82b1bcbe04418f7e1d90a66940cd80985d59f96ccaaf9578b438ac3a5b33
+      size: 1116
+    version: 0.3.0.0
   original:
-    commit: 5a43fc1cd02f7913889e947a55645c80cc830d95
+    commit: bfa96125d32f3168f4913d2f2233521c12c3c583
     git: https://github.com/autonomousorganization/blitz.git
 snapshots:
 - completed:
