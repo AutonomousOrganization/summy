@@ -50,7 +50,7 @@ app :: PluginApp ()
 app (Just i, "wallet", _) = do 
     Just (Res (fromJSON -> Success funds@(Funds{}) ) _) <- lightningCli $ 
         Command "listfunds" fundFilter fundParams
-    Just (Res (fromJSON -> Success pends@(Pays{})) _) <- lightningCliDebug prin $ 
+    Just (Res (fromJSON -> Success pends@(Pays{})) _) <- lightningCli $ 
         Command "listpays" payFilter (object ["status".= ("pending"::Text) ]) 
     respond (summarizeFunds funds pends) i  
     where 
@@ -127,7 +127,7 @@ data Pay = Pay {
     , ___amount_msat :: Msat
     } deriving (Show, Generic)
 instance ToJSON Pay where 
-    toJSON (Pay d a) = object [ fromText d .= a ] 
+    toJSON (Pay d a) = toJSON $ d <> " : " <> (T.pack.show $ a) 
 instance FromJSON Pay where 
     parseJSON = defaultParse
 
