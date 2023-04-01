@@ -48,11 +48,13 @@ start = pure ()
 
 app :: PluginApp () 
 app (Just i, "wallet", _) = do 
-    Just (Res (fromJSON -> Success x@(Funds{}) ) _) <- lightningCli (Command "listfunds" fundFilter fundParams) 
-    respond (summarizeFunds x) i  
+    Just (Res (fromJSON -> Success funds@(Funds{}) ) _) <- lightningCli $ 
+        Command "listfunds" fundFilter fundParams
+    Just (Res (fromJSON -> Success pends@(Pays{})) _) <- lightningCliDebug prin $ 
+        Command "listpays" payFilter (object ["status".= ("pending"::Text) ]) 
+    respond (summarizeFunds funds pends) i  
     where 
-        summarizeFunds :: Funds -> Value
-        summarizeFunds myf = object $ [
+        summarizeFunds myf myp = object $ [
               "withdraw" .= (prettyI (Just ',') . (`div` 1000) . outSum . outputs $ myf)
             , "pay" .= (prettyI (Just ',') (payable $ fchannels myf))
             , "invoice" .= (prettyI (Just ',') $ recable (fchannels myf))
@@ -60,6 +62,11 @@ app (Just i, "wallet", _) = do
                 case limbo (fchannels myf) of 
                     [] -> []
                     x -> ["_limbo" .= object x]
+              <> 
+                case pays myp of
+                    [] -> []
+                    px -> ["_pending" .= px] 
+                    
             
             where outSum :: [Outs] -> Msat 
                   outSum = sum . map __amount_msat . filter ((=="confirmed") . __status) 
@@ -69,7 +76,8 @@ app (Just i, "wallet", _) = do
                   normal = filter ((=="CHANNELD_NORMAL")._state)
                   abnormal = filter ((/="CHANNELD_NORMAL")._state)
                   limbo = map keyOb . abnormal 
-                  keyOb (Chans{_state, our_amount_msat}) = (fromText _state) .= our_amount_msat
+                  keyOb (Chans{peer_id, our_amount_msat}) = fromText peer_id .= our_amount_msat
+
 app (Just i, "balances", _) = do
     Just (Res (fromJSON -> Success (Funds{channels})) _) <- lightningCli (Command "listfunds" fundFilter fundParams) 
     respond (balances channels) i 
@@ -107,6 +115,26 @@ app (Just i, "fees", _) = do
                 Just (Res (fromJSON -> Success (Fees fx)) _) <- lightningCli listchans
                 pure $ "" +| (build $ T.justifyLeft 13 ' ' sci ) 
                           +| fold (map buildFee $ sortBy orderer fx)
+
+data Pays = Pays {
+      pays :: [Pay]
+    } deriving (Show, Generic)
+instance ToJSON Pays
+instance FromJSON Pays
+
+data Pay = Pay {
+      ___destination :: Text
+    , ___amount_msat :: Msat
+    } deriving (Show, Generic)
+instance ToJSON Pay where 
+    toJSON (Pay d a) = object [ fromText d .= a ] 
+instance FromJSON Pay where 
+    parseJSON = defaultParse
+
+payFilter = object [ "pays" .= [object [
+      "destination" .= True
+    , "amount_msat" .= True
+    ]]]
 
 fundFilter = object [
       "outputs" .= [outputFields]
