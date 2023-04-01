@@ -66,8 +66,6 @@ app (Just i, "wallet", _) = do
                 case pays myp of
                     [] -> []
                     px -> ["_pending" .= px] 
-                    
-            
             where outSum :: [Outs] -> Msat 
                   outSum = sum . map __amount_msat . filter ((=="confirmed") . __status) 
                   payable = sum . map our_amount_msat . normal 
@@ -76,8 +74,10 @@ app (Just i, "wallet", _) = do
                   normal = filter ((=="CHANNELD_NORMAL")._state)
                   abnormal = filter ((/="CHANNELD_NORMAL")._state)
                   limbo = map keyOb . abnormal 
-                  keyOb (Chans{peer_id, our_amount_msat}) = fromText peer_id .= our_amount_msat
-
+                  keyOb (Chans{peer_id, _short_channel_id, our_amount_msat}) = fromText sho .= our_amount_msat
+                      where sho = case _short_channel_id of 
+                                             Just x -> x 
+                                             _      -> peer_id
 app (Just i, "balances", _) = do
     Just (Res (fromJSON -> Success (Funds{channels})) _) <- lightningCli (Command "listfunds" fundFilter fundParams) 
     respond (balances channels) i 
