@@ -36,8 +36,7 @@ packages:
 # forks / in-progress versions pinned to a git hash. For example:
 #
 extra-deps:
-- git: https://github.com/autonomousorganization/blitz.git
-  commit: bfa96125d32f3168f4913d2f2233521c12c3c583
+- clplug-0.3.3.0
 
 
 # extra-deps:

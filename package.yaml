@@ -1,4 +1,4 @@
-name:                moneyclip
+name:                summy
 version:             0.1.0.0
 github:              "githubuser/moneyclip"
 license:             BSD3
@@ -21,7 +21,7 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
-- blitz
+- clplug
 - aeson
 - mtl
 - text
@@ -43,7 +43,7 @@ library:
   source-dirs: src
 
 executables:
-  moneyclip:
+  summy:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -51,7 +51,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - moneyclip
+    - summy
 
 tests:
   moneyclip-test:
@@ -62,4 +62,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - moneyclip
+    - summy

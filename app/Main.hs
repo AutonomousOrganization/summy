@@ -61,11 +61,11 @@ app (Just i, "wallet", _) = do
             ] <> 
                 case limbo (fchannels myf) of 
                     [] -> []
-                    x -> ["_limbo" .= object x]
+                    x -> ["_channel_limbo" .= object x]
               <> 
                 case pays myp of
                     [] -> []
-                    px -> ["_pending" .= px] 
+                    px -> ["_pending_pays" .= px] 
             where outSum :: [Outs] -> Msat 
                   outSum = sum . map __amount_msat . filter ((=="confirmed") . __status) 
                   payable = sum . map our_amount_msat . normal 
@@ -131,12 +131,12 @@ instance ToJSON Pay where
 instance FromJSON Pay where 
     parseJSON = defaultParse
 
-payFilter = object [ "pays" .= [object [
+payFilter = Just $ object [ "pays" .= [object [
       "destination" .= True
     , "amount_msat" .= True
     ]]]
 
-fundFilter = object [
+fundFilter = Just $ object [
       "outputs" .= [outputFields]
     , "channels" .= [chanFields]
     ]
@@ -152,7 +152,7 @@ chanFields = object [
     , "short_channel_id" .= True
     ]
 
-feeFields = object [
+feeFields = Just $ object [
     "channels" .= [ object [
           "fee_per_millionth" .= True
         , "base_fee_millisatoshi" .= True

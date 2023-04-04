@@ -5,16 +5,12 @@
 
 packages:
 - completed:
-    commit: bfa96125d32f3168f4913d2f2233521c12c3c583
-    git: https://github.com/autonomousorganization/blitz.git
-    name: blitz
+    hackage: clplug-0.3.3.0@sha256:74bdf27b21cc202236e0747c63bca1154b8a3be2885684a489fb7c4dae09020d,2230
     pantry-tree:
-      sha256: 343a82b1bcbe04418f7e1d90a66940cd80985d59f96ccaaf9578b438ac3a5b33
-      size: 1116
-    version: 0.3.0.0
+      sha256: 0bd1891e5f0c08e953ddcc1a5daf79d53f4e142cddf6afcba17bd5d344257a4d
+      size: 909
   original:
-    commit: bfa96125d32f3168f4913d2f2233521c12c3c583
-    git: https://github.com/autonomousorganization/blitz.git
+    hackage: clplug-0.3.3.0
 snapshots:
 - completed:
     sha256: b37c0abab16c7de352c45b85f8ecc8530b084209a2c42987a96c92b4a5e3cd65
