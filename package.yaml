@@ -27,6 +27,8 @@ dependencies:
 - text
 - fmt
 - format-numbers
+- time 
+- directory
 
 ghc-options:
 - -Wall

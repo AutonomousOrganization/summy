@@ -5,6 +5,8 @@
     , ViewPatterns 
     , NamedFieldPuns 
     , DuplicateRecordFields
+    , LambdaCase
+    , RecordWildCards
     #-}
 
 module Main where 
@@ -14,20 +16,25 @@ import Data.Lightning.Generic
 import Control.Plugin 
 import Control.Client 
 import Data.Aeson
+import Data.Aeson.Types
 import Data.Aeson.Key
 import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.IO.Class 
 import GHC.Generics 
+import System.Directory
 import Data.Text (Text)
 import qualified Data.Text.Lazy as LT 
 import qualified Data.Text as T 
+import qualified Data.Text.IO as T 
 import Fmt 
 import Data.Text.Format.Numbers 
 import Data.List 
 import Data.Maybe
 import Data.Ratio
 import Data.Foldable
+import Data.Time.LocalTime
+import Data.Time.Format
 
 prin m = liftIO $ appendFile "/home/o/.ao/storm" $ show m 
 
@@ -35,18 +42,35 @@ main = plugin manifest start app
 
 manifest = object [
       "dynamic" .= True
-    , "options" .= ([] :: [Option])
+    , "options" .= ([
+         Option "logfile" "string" "" "file path for logs" False
+      ])
     , "rpcmethods" .= [
          RpcMethod "wallet" "" "print wallet totals" Nothing False 
        , RpcMethod "balances" "" "print channel balances" Nothing False 
        , RpcMethod "fees" "" "print channel fees" Nothing False
        ]
+    , "subscriptions" .= (["forward_event"] :: [Text] ) 
     ]
 
-start :: InitMonad ()  
-start = pure () 
+start :: InitMonad Msat
+start = pure 0
 
-app :: PluginApp () 
+app :: PluginApp Msat
+
+app (Nothing, "forward_event", 
+    fromJSON -> Success (ForwardEvent{status = "settled", ..})) = do
+        (x) <- get
+        (Just filepath) <- getValidOption
+        time <- liftIO $ do 
+            zone <- getZonedTime 
+            pure $ formatTime defaultTimeLocale "%H:%M" zone
+        liftIO $ movelog filepath time (x + fee_msat) fee_msat 
+        put (x + fee_msat) 
+        liftIO $ "" +| build in_channel  
+                    +| " > "
+                    +| build out_channel 
+
 app (Just i, "wallet", _) = do 
     Just (Res (fromJSON -> Success funds@(Funds{}) ) _) <- lightningCli $ 
         Command "listfunds" fundFilter fundParams
@@ -115,6 +139,27 @@ app (Just i, "fees", _) = do
                 Just (Res (fromJSON -> Success (Fees fx)) _) <- lightningCli listchans
                 pure $ "" +| (build $ T.justifyLeft 13 ' ' sci ) 
                           +| fold (map buildFee $ sortBy orderer fx)
+
+
+movelog :: FilePath -> String -> Msat -> Msat -> IO () 
+movelog path time  tots now = do 
+    liftIO . (T.appendFile path) . fmtLn $ mlog
+    where 
+        mlog = (build.(prettyI (Just ',')).(`div` 1000) $ tots) 
+            +| " total " 
+            +| build time
+            +| " +"
+            +| build now
+
+getValidOption :: PluginMonad s (Maybe FilePath)  
+getValidOption = do 
+    Init opts _ <- asks conf
+    x <- liftIO $ getFile . parseMaybe (.: "logfile") $ opts
+    pure x 
+    where getFile w@(Just y) = doesFileExist y >>= \case 
+              True -> pure w
+              False -> pure Nothing    
+          getFile _ = pure Nothing 
 
 data Pays = Pays {
       pays :: [Pay]
