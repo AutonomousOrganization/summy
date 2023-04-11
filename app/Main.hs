@@ -35,6 +35,7 @@ import Data.Ratio
 import Data.Foldable
 import Data.Time.LocalTime
 import Data.Time.Format
+import System.Process (callCommand) 
 
 prin m = liftIO $ appendFile "/home/o/.ao/storm" $ show m 
 
@@ -53,23 +54,25 @@ manifest = object [
     , "subscriptions" .= (["forward_event"] :: [Text] ) 
     ]
 
-start :: InitMonad Msat
-start = pure 0
+start :: InitMonad (Msat, Maybe FilePath) 
+start = do 
+    f <- getValidOption
+    pure (0, f) 
 
-app :: PluginApp Msat
+app :: PluginApp (Msat, Maybe FilePath) 
 
 app (Nothing, "forward_event", 
     fromJSON -> Success (ForwardEvent{status = "settled", ..})) = do
-        (x) <- get
-        (Just filepath) <- getValidOption
+        (x, Just filepath) <- get 
         time <- liftIO $ do 
             zone <- getZonedTime 
             pure $ formatTime defaultTimeLocale "%H:%M" zone
         liftIO $ movelog filepath time (x + fee_msat) fee_msat 
-        put (x + fee_msat) 
-        liftIO $ "" +| build in_channel  
+        put (x + fee_msat, Just filepath) 
+        liftIO . T.appendFile filepath $ "" +| build in_channel  
                     +| " > "
                     +| build out_channel 
+                    +| "\n"
 
 app (Just i, "wallet", _) = do 
     Just (Res (fromJSON -> Success funds@(Funds{}) ) _) <- lightningCli $ 
@@ -140,6 +143,9 @@ app (Just i, "fees", _) = do
                 pure $ "" +| (build $ T.justifyLeft 13 ' ' sci ) 
                           +| fold (map buildFee $ sortBy orderer fx)
 
+app (Just i, _, _) = release i 
+app _ = pure () 
+
 
 movelog :: FilePath -> String -> Msat -> Msat -> IO () 
 movelog path time  tots now = do 
@@ -151,13 +157,13 @@ movelog path time  tots now = do
             +| " +"
             +| build now
 
-getValidOption :: PluginMonad s (Maybe FilePath)  
+getValidOption :: InitMonad (Maybe FilePath)
 getValidOption = do 
-    Init opts _ <- asks conf
-    x <- liftIO $ getFile . parseMaybe (.: "logfile") $ opts
-    pure x 
-    where getFile w@(Just y) = doesFileExist y >>= \case 
-              True -> pure w
+    Init opts _ <- asks (conf)
+    Just f <- pure $ parseMaybe (.: "logfile") $ opts
+    liftIO $ getFile f
+    where getFile y = doesPathExist y >>= \case 
+              True -> pure (Just y)
               False -> pure Nothing    
           getFile _ = pure Nothing 
 
